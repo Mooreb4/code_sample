@@ -7,7 +7,6 @@
 #include <fstream>
 #include <ostream>
 #include <gsl/gsl_randist.h>
-#include <filesystem>
 
 #include "llhood_maxd.hpp"
 #include "fisher.hpp"
@@ -30,12 +29,12 @@ struct Chain_BD{
     int count_swap_accpt;
     vector<double> loc;
     vector<double> prop;
-    MatrixXd fisher;
-    SelfAdjointEigenSolver<Eigen::MatrixXd> eigen_sys;
+    Eigen::MatrixXd fisher;
+    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigen_sys;
     vector<vector<double>> DE_samples;
     int DE_track;
     
-    Chain_BD(double M, double eta, double e0, double A, double b, double T, double fend
+    Chain_BD(double M, double eta, double e0, double A, double b, double T, double fend,
              double df_fish, double ep_fish, vector<double> &noise, vector<double> &noise_fish,
              vector<complex<double>> &h2) :
     
@@ -69,8 +68,8 @@ struct Chain_GR{
     int count_swap_accpt;
     vector<double> loc;
     vector<double> prop;
-    MatrixXd fisher;
-    SelfAdjointEigenSolver<Eigen::MatrixXd> eigen_sys;
+    Eigen::MatrixXd fisher;
+    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigen_sys;
     vector<vector<double>> DE_samples;
     int DE_track;
     
@@ -133,11 +132,11 @@ void jump(Chain &c, const gsl_rng * r, double fend, vector<complex<double>> &h2,
 void jump_TD_GR_to_BD(Chain &c, const gsl_rng * r, double fend, vector<complex<double>> &h2, vector<double> &noise);
 void jump_TD_BD_to_GR(Chain &c, const gsl_rng * r, double fend, vector<complex<double>> &h2, vector<double> &noise);
 double eval_log_g_gaus (double x, double mu, double sigma);
-void jump_GR(Chain &c, const gsl_rng * r, double fend, vector<complex<double>> &h2, vector<double> &noise, int &counter);
+void jump_GR(Chain &c, const gsl_rng * r, double fend, vector<complex<double>> &h2, vector<double> &noise);
 void set_loc(vector<double> &prop, vector<double> &loc);
 // These DE_props can be made to just take the chains
 void DE_prop_GR(vector<double> &loc, vector<double> &prop, const gsl_rng * r, int N_DE_samples, vector<vector<double>> &DE_samples);
-void jump_BD(Chain &c, const gsl_rng * r, double fend, double df, vector<complex<double>> &h2, vector<double> &noise);
+void jump_BD(Chain &c, const gsl_rng * r, double fend, vector<complex<double>> &h2, vector<double> &noise);
 void DE_prop_BD(vector<double> &loc, vector<double> &prop, const gsl_rng * r, int N_DE_samples, vector<vector<double>> &DE_samples);
 void prior_prop_GR(vector<double> &prop, const gsl_rng * r);
 void prior_prop_BD(vector<double> &prop, const gsl_rng * r);
@@ -153,18 +152,30 @@ void inter_chain_swap(Chain &c1, Chain &c2, const gsl_rng * r, double fend, doub
 void inter_chain_swap_trans(Chain &c1, Chain &c2, const gsl_rng * r, double fend, double df, vector<complex<double>> &h2, vector<double> &noise);
 void inter_chain_swap_same_dim(Chain_GR &c1, Chain_GR &c2, const gsl_rng * r);
 void inter_chain_swap_same_dim(Chain_BD &c1, Chain_BD &c2, const gsl_rng * r);
-void swap_fishers(MatrixXd &fish1, MatrixXd &fish2, SelfAdjointEigenSolver<Eigen::MatrixXd> &es1 , SelfAdjointEigenSolver<Eigen::MatrixXd> &es2, double T1, double T2);
+void swap_fishers(Eigen::MatrixXd &fish1, Eigen::MatrixXd &fish2, Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> &es1 , Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> &es2, double T1, double T2);
 void swap_loc(vector<double> &loc1, vector<double> &loc2);
+void record(Chain &c, vector<vector<vector<double>>> &chain_store, vector<vector<double>> &like_store, int chain_num, int i);
+void write_vec_to_vec(vector<vector<double>> &samples, vector<double> &sample, int i);
+void write_vec_to_file(vector<vector<double>> &vect, string filename, string path);
+void write_vec_to_file(vector<double> &vect, string str, string path);
+void write_vec_to_file(vector<vector<double>> &vect, string filename, string path, ofstream &out, int start, int end);
+void write_vec_to_file(vector<double> &vect, string filename, string path, ofstream &out, int start, int end);
+void cout_chain_info(Chain c);
+void cout_chain_info(Chain_GR c);
+void cout_chain_info(Chain_BD c);
+void cout_vec(vector<double> &vec);
+void print_accpt_ratios(vector<Chain> &c_vect);
+void print_accpt_ratios(Chain &c, int i);
 
 int main (int argc, const char * argv[]){
     
-    double M_in     = stod(argv[1]);
-    double eta_in   = stod(argv[2]);
-    double e0_in    = stod(argv[3])/1000.;
-    double A_in     = exp(stod(argv[4]));
-    double b_exp    = stod(argv[5])/100.;
-    double b_in     = pow(10, -b_exp);
-    double SNR_in   = stod(argv[6]);
+    auto M_in     = stod(argv[1]);
+    auto eta_in   = stod(argv[2]);
+    auto e0_in    = stod(argv[3])/1000.;
+    auto A_in     = exp(stod(argv[4]));
+    auto b_exp    = stod(argv[5])/100.;
+    auto b_in     = pow(10, -b_exp);
+    auto SNR_in   = stod(argv[6]);
     
     if (e0_in == 0){e0_in = 0.000001;}
     
@@ -176,8 +187,8 @@ int main (int argc, const char * argv[]){
     
     std::cout << "Injection Begun" << std::endl;
     
-    vector<complex<double>> h2  = gen_waveform(M_in, eta_in, e0_in, A_in, b_in, f_begin, f_end, df);
-    int data_size               = h2.size();
+    auto h2  = gen_waveform(M_in, eta_in, e0_in, A_in, b_in, f_begin, f_end, df);
+    auto data_size               = h2.size();
     
     vector<double> freqs(data_size);
     
@@ -186,7 +197,7 @@ int main (int argc, const char * argv[]){
         freqs[i] = df*i;
     }
     
-    double fend = freqs[data_size - 1];
+    auto fend = freqs[data_size - 1];
     
     std::cout << "Injection Complete" << std::endl;
     
@@ -195,18 +206,18 @@ int main (int argc, const char * argv[]){
     //     Set up downsampled noise for fisher
     ////////////////////////////////////////////////////////
     
-    int j         = 0;
-    int num_pts   = 3000;
+    auto j         = 0;
+    auto num_pts   = 3000;
     
     double f_val[num_pts];
     double noise_val[num_pts];
     double in_f;
     double in_noise;
     
-    double f_noise_low  = 1;
-    double f_noise_high = 4096;
+    auto f_noise_low  = 1.0;
+    auto f_noise_high = 4096.0;
     
-    ifstream noisedat (std::filesystem::current_path() + "/AdLIGODwyer.dat");
+    ifstream noisedat ("AdLIGODwyer.dat");
     while(noisedat >> in_f >> in_noise)
     {
         f_val[j] = in_f;
@@ -215,7 +226,7 @@ int main (int argc, const char * argv[]){
     }
     
     gsl_interp_accel *acc         = gsl_interp_accel_alloc ();
-    gsl_spline *noise_spline      = gsl_spline_alloc (gsl_interp_cspline, n);
+    gsl_spline *noise_spline      = gsl_spline_alloc (gsl_interp_cspline, num_pts);
     gsl_spline_init (noise_spline, f_val, noise_val, num_pts);
     
     //noise for the likelihood
@@ -233,10 +244,10 @@ int main (int argc, const char * argv[]){
     }
     
     //downsampled noise for the fisher
-    double df_fish = 0.25;
-    double ep_fish = 1e-8;
+    auto df_fish = 0.25;
+    auto ep_fish = 1e-8;
     
-    int N_down_noise = fend/df_fish + 1;
+    auto N_down_noise = std::floor(fend/df_fish) + 1;
     
     vector<double> noise_fish(N_down_noise);
     double f = 0;
@@ -264,8 +275,8 @@ int main (int argc, const char * argv[]){
     double A_prev = A_in;
     double A_curr = A_in - A_in/100;
     
-    vector<complex<double>> h1 = gen_waveform(M_in, eta_in, e0_in, A_1, b_in, f_begin, fend, df);
-    h2 = gen_waveform(M_in, eta_in, e0_in, A_2, b_in, f_begin, fend, df);
+    vector<complex<double>> h1 = gen_waveform(M_in, eta_in, e0_in, A_prev, b_in, f_begin, fend, df);
+    h2 = gen_waveform(M_in, eta_in, e0_in, A_curr, b_in, f_begin, fend, df);
     
     double snr_shoot_1      = sqrt(get_snr_sq(h1, noise, df));
     double snr_shoot_2      = sqrt(get_snr_sq(h2, noise, df));
@@ -286,7 +297,7 @@ int main (int argc, const char * argv[]){
         std::cout << "Amp = " << A_curr << " Cond = " << snr_diff_curr << std::endl;
     }
     
-    cout << "The Final Injected Parameters are M  = " << M_in << " Eta = " << " eta_in " << eta_in << " e_ref = " << e0_in << " A = " << A_2 << endl;
+    cout << "The Final Injected Parameters are M  = " << M_in << " Eta = " << " eta_in " << eta_in << " e_ref = " << e0_in << " A = " << A_curr << endl;
     
     ////////////////////////////////////////////////////////
     // Initialize the chains
@@ -302,8 +313,8 @@ int main (int argc, const char * argv[]){
     //initialize many chains
     for(int i = 0; i < N_chain; i++)
     {
-        Chain c(M_in, eta_in, e0_in, A_2, b_in, 1*pow(temp_spacing, i), fend, df, df_fish, ep_fish, noise, noise_fish, h2);
-        Chains.push_back(c);
+        Chain c(M_in, eta_in, e0_in, A_curr, b_in, 1*pow(temp_spacing, i), fend, df_fish, ep_fish, noise, noise_fish, h2);
+        chains.push_back(c);
     }
     
     std::cout << "Chains inititialized" << std::endl;
@@ -325,7 +336,7 @@ int main (int argc, const char * argv[]){
         { //Within Tempurature jumps
             for(int j = 0; j < N_chain; j++)
             {
-                jump(chains[j], r, fend, df, h2 ,noise);
+                jump(chains[j], r, fend, h2 ,noise);
             }
         }
         else
@@ -372,14 +383,14 @@ int main (int argc, const char * argv[]){
         //Periodically write data to file
         if ( i % 20000 == 0 && i > 0)
         {
-            write_vec_to_file(chain_store[0], "Samples_N_"+to_string(N_jumps)+"_chain_"+to_string(0)+"_Mc_"+to_string(M_in)+"e_ref"+to_string(e0_in)+"_SNR_"+to_string(SNR_in)+"_b_"+to_string(b_exp)+".txt", std::filesystem::current_path() + "/samples", output, i - 20000, i);
-            write_vec_to_file(like_store[0], "likelihood_N_"+to_string(N_jumps)+"_chain_"+to_string(0)+"_Mc_"+to_string(M_in)+"e_ref"+to_string(e0_in)+"_SNR_"+to_string(SNR_in)+"_b_"+to_string(b_exp)+".txt", std::filesystem::current_path() + "/likelihoods", output, i - 20000, i);
+            write_vec_to_file(chain_store[0], "Samples_N_"+to_string(N_jumps)+"_chain_"+to_string(0)+"_Mc_"+to_string(M_in)+"e_ref"+to_string(e0_in)+"_SNR_"+to_string(SNR_in)+"_b_"+to_string(b_exp)+".txt", "/samples", output, i - 20000, i);
+            write_vec_to_file(like_store[0], "likelihood_N_"+to_string(N_jumps)+"_chain_"+to_string(0)+"_Mc_"+to_string(M_in)+"e_ref"+to_string(e0_in)+"_SNR_"+to_string(SNR_in)+"_b_"+to_string(b_exp)+".txt", "/likelihoods", output, i - 20000, i);
         }
     }
     
     //Write finished samples to file
-    write_vec_to_file(chain_store[0], "Samples_N_"+to_string(N_jumps)+"_chain_"+to_string(0)+"_Mc_"+to_string(M_in)+"e_ref"+to_string(e0_in)+"_SNR_"+to_string(SNR_in)+"_b_"+to_string(b_exp)+".txt", std::filesystem::current_path() + "/samples");
-    write_vec_to_file(like_store[0], "likelihood_N_"+to_string(N_jumps)+"_chain_"+to_string(0)+"_Mc_"+to_string(M_in)+"e_ref"+to_string(e0_in)+"_SNR_"+to_string(SNR_in)+"_b_"+to_string(b_exp)+".txt", std::filesystem::current_path() + "/likelihoods");
+    write_vec_to_file(chain_store[0], "Samples_N_"+to_string(N_jumps)+"_chain_"+to_string(0)+"_Mc_"+to_string(M_in)+"e_ref"+to_string(e0_in)+"_SNR_"+to_string(SNR_in)+"_b_"+to_string(b_exp)+".txt", "/samples");
+    write_vec_to_file(like_store[0], "likelihood_N_"+to_string(N_jumps)+"_chain_"+to_string(0)+"_Mc_"+to_string(M_in)+"e_ref"+to_string(e0_in)+"_SNR_"+to_string(SNR_in)+"_b_"+to_string(b_exp)+".txt", "/likelihoods");
 
     return 0;
 }
@@ -419,13 +430,13 @@ void jump(Chain &c, const gsl_rng * r, double fend, vector<complex<double>> &h2,
         if (c.gr_true == 1)
         {
             // A GR Jump
-            jump_GR(c, fend, h2, noise);
+            jump_GR(c, r, fend, h2, noise);
             c.c_GR.count_in_temp++;
         }
         else
         {
             // A BD Jump
-            jump_BD(c, fend, h2, noise);
+            jump_BD(c, r, fend, h2, noise);
             c.c_BD.count_in_temp++;
         }
     }
@@ -510,7 +521,7 @@ double eval_log_g_gaus (double x, double mu, double sigma)
     return prefac + expfac;
 }
 
-void jump_GR(Chain &c, const gsl_rng * r, double fend, vector<complex<double>> &h2, vector<double> &noise, int &counter)
+void jump_GR(Chain &c, const gsl_rng * r, double fend, vector<complex<double>> &h2, vector<double> &noise)
 {
     double jump_roll = gsl_ran_flat(r, 0, 1);
     
@@ -520,7 +531,7 @@ void jump_GR(Chain &c, const gsl_rng * r, double fend, vector<complex<double>> &
     }
     else if (jump_roll > 0.05)
     {
-        if(N_DE_samples < 2) {fisher_prop_ecc_GR(c.c_GR.loc, c.c_GR.prop, c.c_GR.eigen_sys, r);}
+        if(c.c_GR.DE_track < 2) {fisher_prop_ecc_GR(c.c_GR.loc, c.c_GR.prop, c.c_GR.eigen_sys, r);}
         else {DE_prop_GR(c.c_GR.loc, c.c_GR.prop, r, c.c_GR.DE_track, c.c_GR.DE_samples);}
     }
     else
@@ -563,7 +574,7 @@ void DE_prop_GR(vector<double> &loc, vector<double> &prop, const gsl_rng * r, in
     prop[3]     = exp(log(loc[3]) + fact*(log(DE_samples[i][3]) - log(DE_samples[j][3])));
 }
 
-void jump_BD(Chain &c, const gsl_rng * r, double fend, double df, vector<complex<double>> &h2, vector<double> &noise)
+void jump_BD(Chain &c, const gsl_rng * r, double fend, vector<complex<double>> &h2, vector<double> &noise)
 {
     double jump_roll = gsl_ran_flat(r, 0, 1);
     
@@ -573,7 +584,7 @@ void jump_BD(Chain &c, const gsl_rng * r, double fend, double df, vector<complex
     }
     else if (jump_roll > 0.05)
     {
-        if(N_DE_samples < 2) {fisher_prop_ecc_BD(c.c_BD.loc, c.c_BD.prop, c.c_BD.eigen_sys, r);}
+        if(c.c_BD.DE_track < 2) {fisher_prop_ecc_BD(c.c_BD.loc, c.c_BD.prop, c.c_BD.eigen_sys, r);}
         else {DE_prop_BD(c.c_BD.loc, c.c_BD.prop, r, c.c_BD.DE_track, c.c_BD.DE_samples);}
     }
     else
@@ -665,14 +676,14 @@ void update_fisher(Chain &c, double fend, double df_fish, vector<double> &noise_
 
 void update_fisher_GR(Chain &c, double fend, double df_fish, vector<double> &noise_fish, double ep_fish)
 {
-    c.c_GR.fish = fim_GR(c.c_GR.loc, noise_fish, f_begin, fend, df_fish, ep_fish, c.c_GR.temp, 3);
-    c.c_GR.eigen_sys.compute(c.c_GR.fish);
+    c.c_GR.fisher = fim_GR(c.c_GR.loc, noise_fish, f_begin, fend, df_fish, ep_fish, c.c_GR.temp, 3);
+    c.c_GR.eigen_sys.compute(c.c_GR.fisher);
 }
 
 void update_fisher_BD(Chain &c, double fend, double df_fish, vector<double> &noise_fish, double ep_fish)
 {
-    c.c_BD.fish = fim_BD(c.c_BD.loc, noise_fish, 0, fend, df_fish, ep_fish, c.c_BD.temp, 3);
-    c.c_BD.eigen_sys.compute(c.c_GR.fish);
+    c.c_BD.fisher = fim_BD(c.c_BD.loc, noise_fish, 0, fend, df_fish, ep_fish, c.c_BD.temp, 3);
+    c.c_BD.eigen_sys.compute(c.c_GR.fisher);
 }
 
 void write_to_DE(Chain &c)
@@ -718,12 +729,12 @@ void inter_chain_swap(Chain &c1, Chain &c2, const gsl_rng * r, double fend, doub
 {
     if(c1.gr_true == 1 && c2.gr_true == 1)
     {
-        inter_chain_swap_same_dim(c1.c_GR, c2.c_GR);
+        inter_chain_swap_same_dim(c1.c_GR, c2.c_GR, r);
         c1.c_GR.count_swap++;
     }
     else if (c1.gr_true == 0 && c2.gr_true == 0)
     {
-        inter_chain_swap_same_dim(c1.c_BD, c2.c_BD);
+        inter_chain_swap_same_dim(c1.c_BD, c2.c_BD, r);
         c1.c_BD.count_swap++;
     }
     else
@@ -816,9 +827,9 @@ void inter_chain_swap_same_dim(Chain_BD &c1, Chain_BD &c2, const gsl_rng * r)
     }
 }
 
-void swap_fishers(MatrixXd &fish1, MatrixXd &fish2, SelfAdjointEigenSolver<Eigen::MatrixXd> &es1 , SelfAdjointEigenSolver<Eigen::MatrixXd> &es2, double T1, double T2)
+void swap_fishers(Eigen::MatrixXd &fish1, Eigen::MatrixXd &fish2, Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> &es1 , Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> &es2, double T1, double T2)
 {
-    MatrixXd fish_tmp;
+    Eigen::MatrixXd fish_tmp;
     
     fish_tmp    = fish1;
     fish1       = fish2*T2/T1;
@@ -838,7 +849,7 @@ void swap_loc(vector<double> &loc1, vector<double> &loc2)
 
 // Turn these into member functions
 
-void record(chain &c, vector<vector<vector<double>>> &chain_store, vector<vector<double>> &like_store, int chain_num, int i)
+void record(Chain &c, vector<vector<vector<double>>> &chain_store, vector<vector<double>> &like_store, int chain_num, int i)
 {
     if(c.gr_true == 1)
     {
@@ -873,7 +884,8 @@ void write_vec_to_file(vector<vector<double>> &vect, string filename, string pat
     out.close();
 }
 
-void write_vec_to_file(vector<vector<double>> &vect, string filename, string path, ofstream &out, int start, int end){
+void write_vec_to_file(vector<vector<double>> &vect, string filename, string path, ofstream &out, int start, int end)
+{
     if (start == 0){
         out.open(path + filename);
     } else {
@@ -906,65 +918,65 @@ void write_vec_to_file(vector<double> &vect, string str, string path){
     out.close();
 }
 
-void cout_chain_info(chain c1){
+void cout_chain_info(Chain c){
     cout << "GR CHAIN" << endl;
     cout << endl;
-    cout_chain_info(c1.c_GR);
+    cout_chain_info(c.c_GR);
     cout << "BD CHAIN" << endl;
     cout << endl;
-    cout_chain_info(c1.c_BD);
+    cout_chain_info(c.c_BD);
 }
 
-void cout_chain_info(chain_GR c1){
-    cout << "Temp = " << c1.temp << endl;
-    cout << "like_loc = " << c1.loglike_loc << endl;
-    cout << "like_prop = " << c1.loglike_prop << endl;
-    cout << "hast = " << c1.hast_ratio << endl;
-    cout << "urv = " << c1.urv << endl;
-    cout << "count temp = " << c1.count_in_temp << endl;
-    cout << "count temp = " << c1.count_swap << endl;
+void cout_chain_info(Chain_GR c){
+    cout << "Temp = " << c.temp << endl;
+    cout << "like_loc = " << c.loglike_loc << endl;
+    cout << "like_prop = " << c.loglike_prop << endl;
+    cout << "hast = " << c.hast_ratio << endl;
+    cout << "urv = " << c.urv << endl;
+    cout << "count temp = " << c.count_in_temp << endl;
+    cout << "count temp = " << c.count_swap << endl;
     cout << "location" << endl;
-    cout_vec(c1.loc);
+    cout_vec(c.loc);
     cout << "proposal" << endl;
-    cout_vec(c1.prop);
+    cout_vec(c.prop);
     cout << "Fisher" << endl;
-    cout << c1.fisher << endl;
+    cout << c.fisher << endl;
     cout << "Eigensys" << endl;
-    cout << c1.eigen_sys.eigenvalues() << endl;
-    cout << c1.eigen_sys.eigenvectors() << endl;
+    cout << c.eigen_sys.eigenvalues() << endl;
+    cout << c.eigen_sys.eigenvectors() << endl;
 }
 
-void cout_chain_info(chain_BD c1){
-    cout << "Temp = " << c1.temp << endl;
-    cout << "like_loc = " << c1.loglike_loc << endl;
-    cout << "like_prop = " << c1.loglike_prop << endl;
-    cout << "hast = " << c1.hast_ratio << endl;
-    cout << "urv = " << c1.urv << endl;
-    cout << "count temp = " << c1.count_in_temp << endl;
-    cout << "count temp = " << c1.count_swap << endl;
+void cout_chain_info(Chain_BD c){
+    cout << "Temp = " << c.temp << endl;
+    cout << "like_loc = " << c.loglike_loc << endl;
+    cout << "like_prop = " << c.loglike_prop << endl;
+    cout << "hast = " << c.hast_ratio << endl;
+    cout << "urv = " << c.urv << endl;
+    cout << "count temp = " << c.count_in_temp << endl;
+    cout << "count temp = " << c.count_swap << endl;
     cout << "location" << endl;
-    cout_vec(c1.loc);
+    cout_vec(c.loc);
     cout << "proposal" << endl;
-    cout_vec(c1.prop);
+    cout_vec(c.prop);
     cout << "Fisher" << endl;
-    cout << c1.fisher << endl;
+    cout << c.fisher << endl;
     cout << "Eigensys" << endl;
-    cout << c1.eigen_sys.eigenvalues() << endl;
-    cout << c1.eigen_sys.eigenvectors() << endl;
+    cout << c.eigen_sys.eigenvalues() << endl;
+    cout << c.eigen_sys.eigenvectors() << endl;
 }
 
 void cout_vec(vector<double> &vec){
     cout << " M = " << vec[0] <<  " eta = " << vec[1] <<  " e0 = " << vec[2] <<  " amp = " << vec[3] << " b = " << vec[4]  << endl;
 }
 
-void print_accpt_ratios(vector<chain> &c_vect){
+void print_accpt_ratios(vector<Chain> &c_vect){
     int N = c_vect.size();
     for(int i = 0; i < N; i++){
         print_accpt_ratios(c_vect[i], i);
     }
 }
 
-void print_accpt_ratios(chain &c, int i){
+void print_accpt_ratios(Chain &c, int i){
     cout << "ACCEPTANCE RATIOS FOR CHAIN # " << i << endl << endl;
     cout << "   Within Dimension: " << endl << endl;
     cout << "       GR:" << endl;
