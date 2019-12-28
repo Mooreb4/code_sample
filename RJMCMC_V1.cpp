@@ -122,44 +122,39 @@ struct Chain{
     }
 };
 
-vector<complex<double>> gen_waveform(double M, double eta, double e0, double A, double f0, double fend, double df);
+// Make "ep_fisher" a global variable and stop handing it around
+
+// after the functions have been made to take mostly chains they can likely be turned into member functions and lumped into a class.
+// compile before that
+
+vector<complex<double>> gen_waveform(double M, double eta, double e0, double A, double b, double fend);
 vector<complex<double>> sum_f2(vector<vector<complex<double>>> &vect);
-void jump(chain &c, const gsl_rng * r, double fend, double df, vector<complex<double>> &h2, vector<double> &noise);
-void jump_TD_GR_to_BD(chain &c, const gsl_rng * r, double fend, double df, vector<complex<double>> &h2, vector<double> &noise);
-void jump_TD_BD_to_GR(chain &c, const gsl_rng * r, double fend, double df, vector<complex<double>> &h2, vector<double> &noise);
-void jump_GR(vector<double> &loc, vector<double> &prop, SelfAdjointEigenSolver<Eigen::MatrixXd> &es, const gsl_rng * r, double &likehere, double &likeprop, double &rh, double T, double fend, double df, vector<complex<double>> &h2, vector<double> &noise, int &counter, int N_DE_samples, vector<vector<double>> &DE_samples);
-void jump_BD(vector<double> &loc, vector<double> &prop, SelfAdjointEigenSolver<Eigen::MatrixXd> &es, const gsl_rng * r, double &likehere, double &likeprop, double &rh, double T, double fend, double df, vector<complex<double>> &h2, vector<double> &noise, int &counter, int N_DE_samples, vector<vector<double>> &DE_samples);
+void jump(Chain &c, const gsl_rng * r, double fend, vector<complex<double>> &h2, vector<double> &noise);
+void jump_TD_GR_to_BD(Chain &c, const gsl_rng * r, double fend, vector<complex<double>> &h2, vector<double> &noise);
+void jump_TD_BD_to_GR(Chain &c, const gsl_rng * r, double fend, vector<complex<double>> &h2, vector<double> &noise);
 double eval_log_g_gaus (double x, double mu, double sigma);
-void DE_prop_GR(vector<double> &loc, vector<double> &prop, const gsl_rng * r, int N_DE_samples, vector<vector<double>> &DE_samples);
-void DE_prop_BD(vector<double> &loc, vector<double> &prop, const gsl_rng * r, int N_DE_samples, vector<vector<double>> &DE_samples);
+void jump_GR(Chain &c, const gsl_rng * r, double fend, vector<complex<double>> &h2, vector<double> &noise, int &counter);
 void set_loc(vector<double> &prop, vector<double> &loc);
+// These DE_props can be made to just take the chains
+void DE_prop_GR(vector<double> &loc, vector<double> &prop, const gsl_rng * r, int N_DE_samples, vector<vector<double>> &DE_samples);
+void jump_BD(Chain &c, const gsl_rng * r, double fend, double df, vector<complex<double>> &h2, vector<double> &noise);
+void DE_prop_BD(vector<double> &loc, vector<double> &prop, const gsl_rng * r, int N_DE_samples, vector<vector<double>> &DE_samples);
 void prior_prop_GR(vector<double> &prop, const gsl_rng * r);
 void prior_prop_BD(vector<double> &prop, const gsl_rng * r);
 int check_priors_GR(vector<double> &prop);
 int check_priors_BD(vector<double> &prop);
-void update_fisher(chain &c, double fend, double df, vector<double> &noise_fish, double ep_fish);
-void update_fisher_GR(vector<double> &loc, MatrixXd &fish, SelfAdjointEigenSolver<Eigen::MatrixXd> &es, double T, double fend, double df, vector<double> &noise_fish, double ep_fish);
-void update_fisher_BD(vector<double> &loc, MatrixXd &fish, SelfAdjointEigenSolver<Eigen::MatrixXd> &es, double T, double fend, double df, vector<double> &noise_fish, double ep_fish);
-void inter_chain_swap(chain &c1, chain &c2, const gsl_rng * r, double fend, double df, vector<complex<double>> &h2, vector<double> &noise);
-void inter_chain_swap_trans(chain &c1, chain &c2, const gsl_rng * r, double fend, double df, vector<complex<double>> &h2, vector<double> &noise);
-void inter_chain_swap_same_dim(vector<double> &loc1, vector<double> &loc2, double &likehere1, double &likehere2, const gsl_rng * r, double T1, double T2, double fend, double df, vector<complex<double>> &h2, vector<double> &noise, MatrixXd &fish1, MatrixXd &fish2, SelfAdjointEigenSolver<Eigen::MatrixXd> &es1 , SelfAdjointEigenSolver<Eigen::MatrixXd> &es2, int &counter);
-void write_to_DE(chain &c);
-void write_to_DE(chain_GR &c);
-void write_to_DE(chain_BD &c);
-void record(chain &c, vector<vector<vector<double>>> &chain_store, vector<vector<double>> &like_store, int chain_num, int i);
-void write_vec_to_vec(vector<vector<double>> &samples, vector<double> &sample, int i);
-void write_vec_to_file(vector<vector<double>> &vect, string filename, string path);
-void write_vec_to_file(vector<double> &vect, string filename, string path);
-void cout_chain_info(chain c1);
-void cout_chain_info(chain_GR c1);
-void cout_chain_info(chain_BD c1);
-void cout_vec(vector<double> &vec);
+void update_fisher(Chain &c, double fend, double df_fish, vector<double> &noise_fish, double ep_fish);
+void update_fisher_GR(Chain &c, double fend, double df_fish, vector<double> &noise_fish, double ep_fish);
+void update_fisher_BD(Chain &c, double fend, double df_fish, vector<double> &noise_fish, double ep_fish);
+void write_to_DE(Chain &c);
+void write_to_DE(Chain_GR &c);
+void write_to_DE(Chain_BD &c);
+void inter_chain_swap(Chain &c1, Chain &c2, const gsl_rng * r, double fend, double df, vector<complex<double>> &h2, vector<double> &noise);
+void inter_chain_swap_trans(Chain &c1, Chain &c2, const gsl_rng * r, double fend, double df, vector<complex<double>> &h2, vector<double> &noise);
+void inter_chain_swap_same_dim(Chain_GR &c1, Chain_GR &c2, const gsl_rng * r);
+void inter_chain_swap_same_dim(Chain_BD &c1, Chain_BD &c2, const gsl_rng * r);
 void swap_fishers(MatrixXd &fish1, MatrixXd &fish2, SelfAdjointEigenSolver<Eigen::MatrixXd> &es1 , SelfAdjointEigenSolver<Eigen::MatrixXd> &es2, double T1, double T2);
 void swap_loc(vector<double> &loc1, vector<double> &loc2);
-void print_accpt_ratios(vector<chain> &c_vect);
-void print_accpt_ratios(chain &c, int i);
-void write_vec_to_file(vector<vector<double>> &vect, string filename, string path, ofstream &out, int start, int end);
-void write_vec_to_file(vector<double> &vect, string filename, string path, ofstream &out, int start, int end);
 
 int main (int argc, const char * argv[]){
     
@@ -668,19 +663,19 @@ void update_fisher(Chain &c, double fend, double df_fish, vector<double> &noise_
     }
 }
 
-void update_fisher_GR(Chain &c, double T, double fend, double df_fish, vector<double> &noise_fish, double ep_fish)
+void update_fisher_GR(Chain &c, double fend, double df_fish, vector<double> &noise_fish, double ep_fish)
 {
     c.c_GR.fish = fim_GR(c.c_GR.loc, noise_fish, f_begin, fend, df_fish, ep_fish, c.c_GR.temp, 3);
     c.c_GR.eigen_sys.compute(c.c_GR.fish);
 }
 
-void update_fisher_BD(Chain &c, double T, double fend, double df_fish, vector<double> &noise_fish, double ep_fish)
+void update_fisher_BD(Chain &c, double fend, double df_fish, vector<double> &noise_fish, double ep_fish)
 {
     c.c_BD.fish = fim_BD(c.c_BD.loc, noise_fish, 0, fend, df_fish, ep_fish, c.c_BD.temp, 3);
     c.c_BD.eigen_sys.compute(c.c_GR.fish);
 }
 
-void write_to_DE(chain &c)
+void write_to_DE(Chain &c)
 {
     if(c.gr_true == 1)
     {
@@ -691,7 +686,7 @@ void write_to_DE(chain &c)
     }
 }
 
-void write_to_DE(chain_BD &c)
+void write_to_DE(Chain_BD &c)
 {
     if(c.DE_track == 1000)
     {
@@ -705,7 +700,7 @@ void write_to_DE(chain_BD &c)
     c.DE_track++;
 }
 
-void write_to_DE(chain_GR &c)
+void write_to_DE(Chain_GR &c)
 {
     if(c.DE_track == 1000)
     {
@@ -738,7 +733,7 @@ void inter_chain_swap(Chain &c1, Chain &c2, const gsl_rng * r, double fend, doub
     
 }
 
-void inter_chain_swap_trans(chain &c1, chain &c2, const gsl_rng * r, double fend, double df, vector<complex<double>> &h2, vector<double> &noise){
+void inter_chain_swap_trans(Chain &c1, Chain &c2, const gsl_rng * r, double fend, double df, vector<complex<double>> &h2, vector<double> &noise){
     double T1 = c1.c_GR.temp;
     double T2 = c2.c_GR.temp;
     
@@ -840,6 +835,8 @@ void swap_loc(vector<double> &loc1, vector<double> &loc2)
     set_loc(loc2, loc1);
     set_loc(tmp, loc2);
 }
+
+// Turn these into member functions
 
 void record(chain &c, vector<vector<vector<double>>> &chain_store, vector<vector<double>> &like_store, int chain_num, int i)
 {
