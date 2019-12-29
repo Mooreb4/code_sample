@@ -2,6 +2,7 @@
 #define _CHAIN_HPP_
 
 #include <gsl/gsl_randist.h>
+#include <gsl/gsl_rng.h>
 
 #include "llhood_maxd.hpp"
 #include "fisher.hpp"
@@ -11,7 +12,6 @@ class Chain
 {
 public:
     virtual ~Chain() {};
-    virtual void init_walker()              = 0;
     virtual void update_prop_fisher()       = 0;
     virtual void update_prop_diff_evol()    = 0;
     virtual void update_prop_priors()       = 0;
@@ -27,16 +27,14 @@ public:
     virtual void update_fisher()            = 0;
     virtual void accept_jump()              = 0;
     virtual void reject_jump()              = 0;
-    virtual void interchain_swap(Chain c)   = 0;
-}
+};
 
 // A derived class which handles General Relativity Parameter Estimation
 class Chain_GR : public Chain
 {
 public:
-    Chain_GR();
+    Chain_GR(vector<complex<double>> signal_, vector<double> curr, vector<double> noise_, vector<double> noise_fish_, double temp_, double f_begin_, double fend_, double df_, double df_fish_, double ep_fish_, unsigned int num_params_, unsigned int num_diff_evol_samples_);
     virtual ~Chain_GR();
-    virtual void init_walker();
     virtual void update_prop_fisher();
     virtual void update_prop_diff_evol();
     virtual void update_prop_priors();
@@ -61,24 +59,33 @@ private:
     unsigned int count_in_temp_accpt;
     unsigned int count_interchain_accpt;
     unsigned int diff_evol_track;
+    unsigned int num_params;
+    unsigned int num_diff_evol_samples;
     double curr_log_like;
     double prop_log_like;
     double temp;
-    const gsl_rng * r;
+    double f_begin;
+    double fend;
+    double df;
+    double df_fish;
+    double ep_fish;
+    gsl_rng * r;
     vector<double> curr_state;
     vector<double> prop_state;
+    vector<double> noise;
+    vector<double> noise_fish;
     vector<vector<double>> diff_evol_vals;
+    vector<complex<double>> signal;
     Eigen::MatrixXd fisher;
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigen_sys;
-}
+};
 
 // A derived class which handles Brans-Dicke gravity Parameter Estimation
 class Chain_BD : public Chain
 {
 public:
-    Chain_BD();
+    Chain_BD(vector<complex<double>> signal_, vector<double> curr, vector<double> noise_, vector<double> noise_fish_, double temp_, double f_begin_, double fend_, double df_, double df_fish_, double ep_fish_, unsigned int num_params_, unsigned int num_diff_evol_samples_);
     virtual ~Chain_BD();
-    virtual void init_walker();
     virtual void update_prop_fisher();
     virtual void update_prop_diff_evol();
     virtual void update_prop_priors();
@@ -103,15 +110,25 @@ private:
     unsigned int count_in_temp_accpt;
     unsigned int count_interchain_accpt;
     unsigned int diff_evol_track;
+    unsigned int num_params;
+    unsigned int num_diff_evol_samples;
     double curr_log_like;
     double prop_log_like;
     double temp;
-    const gsl_rng * r;
+    double f_begin;
+    double fend;
+    double df;
+    double df_fish;
+    double ep_fish;
+    gsl_rng * r;
     vector<double> curr_state;
     vector<double> prop_state;
+    vector<double> noise;
+    vector<double> noise_fish;
     vector<vector<double>> diff_evol_vals;
+    vector<complex<double>> signal;
     Eigen::MatrixXd fisher;
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigen_sys;
-}
+};
 
 #endif
