@@ -192,7 +192,7 @@ int main (int argc, const char * argv[]){
     
     vector<double> freqs(data_size);
     
-    for(int i = 0; i < data_size; i++)
+    for(unsigned int i = 0; i < freqs.size(); i++)
     {
         freqs[i] = df*i;
     }
@@ -231,7 +231,7 @@ int main (int argc, const char * argv[]){
     
     //noise for the likelihood
     vector<double> noise(data_size);
-    for (int i = 0; i < data_size; i++)
+    for (unsigned int i = 0; i < noise.size(); i++)
     {
         if (freqs[i] > f_noise_low &&  freqs[i] < f_noise_high )
         {
@@ -250,8 +250,8 @@ int main (int argc, const char * argv[]){
     auto N_down_noise = std::floor(fend/df_fish) + 1;
     
     vector<double> noise_fish(N_down_noise);
-    double f = 0;
-    for (int i = 0; i < N_down_noise; i++)
+    auto f = 0.0;
+    for (unsigned int i = 0; i < N_down_noise; i++)
     {
         f = df_fish*i;
         
@@ -272,17 +272,17 @@ int main (int argc, const char * argv[]){
     
     std::cout << "Beginning root finding" << std::endl;
     
-    double A_prev = A_in;
-    double A_curr = A_in - A_in/100;
+    auto A_prev = A_in;
+    auto A_curr = A_in - A_in/100;
     
-    vector<complex<double>> h1 = gen_waveform(M_in, eta_in, e0_in, A_prev, b_in, f_begin, fend, df);
+    auto h1 = gen_waveform(M_in, eta_in, e0_in, A_prev, b_in, f_begin, fend, df);
     h2 = gen_waveform(M_in, eta_in, e0_in, A_curr, b_in, f_begin, fend, df);
     
-    double snr_shoot_1      = sqrt(get_snr_sq(h1, noise, df));
-    double snr_shoot_2      = sqrt(get_snr_sq(h2, noise, df));
-    double snr_diff_prev    = snr_shoot_1 - SNR_in;
-    double snr_diff_curr    = snr_shoot_2 - SNR_in;
-    double A_next           = A_prev - snr_diff_prev*(A_prev-A_curr)/(snr_diff_prev-snr_diff_curr);
+    auto snr_shoot_1      = sqrt(get_snr_sq(h1, noise, df));
+    auto snr_shoot_2      = sqrt(get_snr_sq(h2, noise, df));
+    auto snr_diff_prev    = snr_shoot_1 - SNR_in;
+    auto snr_diff_curr    = snr_shoot_2 - SNR_in;
+    auto A_next           = A_prev - snr_diff_prev*(A_prev-A_curr)/(snr_diff_prev-snr_diff_curr);
 
     while(abs(snr_diff_curr) > 0.001)
     {
@@ -305,13 +305,13 @@ int main (int argc, const char * argv[]){
     
     std::cout << "Initializing Chains" << std::endl;
     
-    int N_chain          = stoi(argv[7]);
-    double temp_spacing  = stod(argv[8]);
+    auto N_chain          = stoi(argv[7]);
+    auto temp_spacing     = stod(argv[8]);
     
     vector<Chain> chains;
     
     //initialize many chains
-    for(int i = 0; i < N_chain; i++)
+    for(unsigned int i = 0; i < N_chain; i++)
     {
         Chain c(M_in, eta_in, e0_in, A_curr, b_in, 1*pow(temp_spacing, i), fend, df_fish, ep_fish, noise, noise_fish, h2);
         chains.push_back(c);
@@ -324,44 +324,44 @@ int main (int argc, const char * argv[]){
     
     ofstream output;
     
-    int N_jumps         = stoi(argv[9]);
+    auto N_jumps        = stoi(argv[9]);
     const gsl_rng * r   = gsl_rng_alloc (gsl_rng_taus);
     
     vector<vector<vector<double>>> chain_store(N_chain, vector<vector<double>>(N_jumps, vector<double>(num_params)));
     vector<vector<double>> like_store(N_chain, vector<double>(N_jumps));
     
-    for(int i = 0; i < N_jumps; i++)
+    for(unsigned int i = 0; i < N_jumps; i++)
     {
         if( i % 5 != 0)
         { //Within Tempurature jumps
-            for(int j = 0; j < N_chain; j++)
+            for(unsigned int j = 0; j < N_chain; j++)
             {
                 jump(chains[j], r, fend, h2 ,noise);
             }
         }
         else
         { //Interchain jumps
-            for(int j = 0; j < N_chain - 1; j++)
+            for(unsigned int j = 0; j < N_chain - 1; j++)
             {
                 inter_chain_swap(chains[j], chains[j+1], r, fend, df, h2, noise);
             }
         }
         //Record Likelihood and Samples.
-        for(int j = 0; j < N_chain; j++)
+        for(unsigned int j = 0; j < N_chain; j++)
         {
             record(chains[j], chain_store, like_store, j, i);
         }
         //Write to differential evolution list every 100 jumps
         if ( i % 100 == 0)
         {
-            for(int j = 0; j < N_chain; j++)
+            for(unsigned int j = 0; j < N_chain; j++)
             {
                 write_to_DE(chains[j]);
             }
         }
         if (i % 10000 == 0)
         {
-            for(int j = 0; j < N_chain; j++)
+            for(unsigned int j = 0; j < N_chain; j++)
             {
                 cout << "MCMC step = " << i << endl;
                 cout_chain_info(chains[j]);
@@ -370,7 +370,7 @@ int main (int argc, const char * argv[]){
         //Periodically update Fishers.
         if( i % 800 == 0 )
         {
-            for(int j = 0; j < N_chain; j++)
+            for(unsigned int j = 0; j < N_chain; j++)
             {
                 update_fisher(chains[j], fend, df_fish, noise_fish, ep_fish);
             }

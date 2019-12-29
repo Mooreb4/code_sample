@@ -1,3 +1,8 @@
+#ifndef _CHAIN_HPP_
+#define _CHAIN_HPP_
+
+#include <gsl/gsl_randist.h>
+
 #include "llhood_maxd.hpp"
 #include "fisher.hpp"
 
@@ -11,7 +16,9 @@ public:
     virtual void update_prop_diff_evol()    = 0;
     virtual void update_prop_priors()       = 0;
     virtual void calc_log_like_prop()       = 0;
-    virtual void jump(int i)                = 0;
+    virtual void check_prior()              = 0;
+    virtual void attempt_jump()             = 0;
+    virtual void jump()                     = 0;
     virtual void print_acc_ratios()         = 0;
     virtual void print_states()             = 0;
     virtual void print_fisher()             = 0;
@@ -20,9 +27,10 @@ public:
     virtual void update_fisher()            = 0;
     virtual void accept_jump()              = 0;
     virtual void reject_jump()              = 0;
+    virtual void interchain_swap(Chain c)   = 0;
 }
 
-// An instance of a chain which is restricted to General Relativity waveforms
+// A derived class which handles General Relativity Parameter Estimation
 class Chain_GR : public Chain
 {
 public:
@@ -33,7 +41,9 @@ public:
     virtual void update_prop_diff_evol();
     virtual void update_prop_priors();
     virtual void calc_log_like_prop();
-    virtual void jump(int i);
+    virtual void check_prior();
+    virtual void attempt_jump();
+    virtual void jump();
     virtual void print_acc_ratios();
     virtual void print_states();
     virtual void print_fisher();
@@ -42,18 +52,27 @@ public:
     virtual void update_fisher();
     virtual void accept_jump();
     virtual void reject_jump();
+    virtual void interchain_swap(Chain_GR &c);
     
 private:
-    int count_in_temp, count_interchain, count_transdim, count_in_temp_accpt,
-        count_interchain_accpt, count_transdim_accpt, diff_evol_track;
-    double curr_log_like, prop_log_like, temp;
-    vector<double> curr_state, prop_state;
+    bool out_of_prior_bounds;
+    unsigned int count_in_temp;
+    unsigned int count_interchain;
+    unsigned int count_in_temp_accpt;
+    unsigned int count_interchain_accpt;
+    unsigned int diff_evol_track;
+    double curr_log_like;
+    double prop_log_like;
+    double temp;
+    const gsl_rng * r;
+    vector<double> curr_state;
+    vector<double> prop_state;
     vector<vector<double>> diff_evol_vals;
     Eigen::MatrixXd fisher;
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigen_sys;
 }
 
-// An instance of a chain which can explore waveforms in Brans-Dicke Gravity
+// A derived class which handles Brans-Dicke gravity Parameter Estimation
 class Chain_BD : public Chain
 {
 public:
@@ -64,7 +83,9 @@ public:
     virtual void update_prop_diff_evol();
     virtual void update_prop_priors();
     virtual void calc_log_like_prop();
-    virtual void jump(int i);
+    virtual void check_prior();
+    virtual void attempt_jump();
+    virtual void jump();
     virtual void print_acc_ratios();
     virtual void print_states();
     virtual void print_fisher();
@@ -73,13 +94,24 @@ public:
     virtual void update_fisher();
     virtual void accept_jump();
     virtual void reject_jump();
+    virtual void interchain_swap(Chain_BD &c);
     
 private:
-    int count_in_temp, count_interchain, count_transdim, count_in_temp_accpt,
-    count_interchain_accpt, count_transdim_accpt, diff_evol_track;
-    double curr_log_like, prop_log_like, temp;
-    vector<double> curr_state, prop_state;
+    bool out_of_prior_bounds;
+    unsigned int count_in_temp;
+    unsigned int count_interchain;
+    unsigned int count_in_temp_accpt;
+    unsigned int count_interchain_accpt;
+    unsigned int diff_evol_track;
+    double curr_log_like;
+    double prop_log_like;
+    double temp;
+    const gsl_rng * r;
+    vector<double> curr_state;
+    vector<double> prop_state;
     vector<vector<double>> diff_evol_vals;
     Eigen::MatrixXd fisher;
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigen_sys;
 }
+
+#endif
