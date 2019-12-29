@@ -37,9 +37,73 @@ Chain_GR::~Chain_GR()
 {
     gsl_rng_free (r);
 }
-// todo BCM -- make copy constructor and copy assignment constructor
+// copy constructor
+Chain_GR::Chain_GR( const Chain_GR &copy)
+{
+    count_in_temp           = copy.count_in_temp;
+    count_interchain        = copy.count_interchain;
+    count_in_temp_accpt     = copy.count_in_temp_accpt;
+    count_interchain_accpt  = copy.count_interchain_accpt;
+    diff_evol_track         = copy.diff_evol_track;
+    curr_state              = copy.curr_state;
+    temp                    = copy.temp;
+    curr_log_like           = copy.curr_log_like;
+    fisher                  = copy.fisher;
+    out_of_prior_bounds     = copy.out_of_prior_bounds;
+    
+    signal                  = copy.signal;
+    noise                   = copy.noise;
+    noise_fish              = copy.noise_fish;
+    f_begin                 = copy.f_begin;
+    fend                    = copy.fend;
+    df                      = copy.df;
+    df_fish                 = copy.df_fish;
+    ep_fish                 = copy.ep_fish;
+    num_params              = copy.num_params;
+    num_diff_evol_samples   = copy.num_diff_evol_samples;
+    
+    prop_state              = copy.prop_state;
+    diff_evol_vals          = copy.diff_evol_vals;
+    eigen_sys               = copy.eigen_sys;
+    
+    r                       = gsl_rng_clone( copy.r );
+}
 
-// Consider just storing the log parameter in the below so I can just for the assignments
+// copy assigment constructor
+Chain_GR& Chain_GR::operator=( const Chain_GR &rhs )
+{
+    if ( this != &rhs)
+    {
+        count_in_temp           = rhs.count_in_temp;
+        count_interchain        = rhs.count_interchain;
+        count_in_temp_accpt     = rhs.count_in_temp_accpt;
+        count_interchain_accpt  = rhs.count_interchain_accpt;
+        diff_evol_track         = rhs.diff_evol_track;
+        curr_state              = rhs.curr_state;
+        temp                    = rhs.temp;
+        curr_log_like           = rhs.curr_log_like;
+        fisher                  = rhs.fisher;
+        out_of_prior_bounds     = rhs.out_of_prior_bounds;
+        
+        signal                  = rhs.signal;
+        noise                   = rhs.noise;
+        noise_fish              = rhs.noise_fish;
+        f_begin                 = rhs.f_begin;
+        fend                    = rhs.fend;
+        df                      = rhs.df;
+        df_fish                 = rhs.df_fish;
+        ep_fish                 = rhs.ep_fish;
+        num_params              = rhs.num_params;
+        num_diff_evol_samples   = rhs.num_diff_evol_samples;
+        
+        prop_state              = rhs.prop_state;
+        diff_evol_vals          = rhs.diff_evol_vals;
+        eigen_sys               = rhs.eigen_sys;
+        
+        r                       = gsl_rng_clone( rhs.r );
+    }
+}
+
 void Chain_GR::update_prop_fisher()
 {
     double delt = gsl_ran_gaussian (r, 1.);
@@ -156,9 +220,9 @@ void Chain_GR::jump()
 
 void Chain_GR::print_acc_ratios()
 {
-    cout << "GR chain with temp "   << temp << " acceptance ratios:"                   << endl;
+    cout << "GR chain with temp "   << temp << " acceptance ratios:"                    << endl;
     cout << "Within Temp: "         << (double) count_in_temp_accpt/count_in_temp       << endl;
-    cout << "Interchain: "     << (double) count_interchain_accpt/count_interchain << endl;
+    cout << "Interchain: "          << (double) count_interchain_accpt/count_interchain << endl;
     cout << endl;
 }
 

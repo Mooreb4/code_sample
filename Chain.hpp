@@ -35,6 +35,8 @@ class Chain_GR : public Chain
 public:
     Chain_GR(vector<complex<double>> signal_, vector<double> curr, vector<double> noise_, vector<double> noise_fish_, double temp_, double f_begin_, double fend_, double df_, double df_fish_, double ep_fish_, unsigned int num_params_, unsigned int num_diff_evol_samples_);
     virtual ~Chain_GR();
+    Chain_GR( const Chain_GR &copy);
+    Chain_GR& operator=( const Chain_GR &rhs);
     virtual void update_prop_fisher();
     virtual void update_prop_diff_evol();
     virtual void update_prop_priors();
