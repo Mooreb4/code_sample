@@ -16,10 +16,14 @@ TransDim_Chain_BD_GR::TransDim_Chain_BD_GR(vector<complex<double>> &signal_, vec
 {
     num_params_GR = num_params_GR_;
     num_params_BD = num_params_BD_;
-    count_transdim = 0;
-    count_transdim_accpt = 0;
-    count_transdim_interchain = 0;
-    count_transdim_interchain_accpt = 0;
+    count_transdim_GR_BD = 0;
+    count_transdim_GR_BD_accpt = 0;
+    count_transdim_GR_BD_interchain = 0;
+    count_transdim_GR_BD_interchain_accpt = 0;
+    count_transdim_BD_GR = 0;
+    count_transdim_BD_GR_accpt = 0;
+    count_transdim_BD_GR_interchain = 0;
+    count_transdim_BD_GR_interchain_accpt = 0;
     is_curr_GR = init_state;
     r = gsl_rng_alloc (gsl_rng_taus);
 }
@@ -70,6 +74,60 @@ void TransDim_Chain_BD_GR::transdim_jump_2_to_1()
             reject_2_to_1();
         }
     }
+}
+
+void TransDim_Chain_BD_GR::transdim_jump_1_to_2()
+{
+    update_prop_1_to_2();
+    c_GR.check_prior();
+    if(c_GR.out_of_prior_bounds == true)
+    {
+        reject_1_to_2();
+    }
+    else
+    {
+        double p_x = log(1./c_BD.curr_state[4]*0.0542868); //the extra-dimensional RV draw PDF evaluated at extra-dimensional value
+        c_GR.calc_log_like_prop();
+        double transdim_log_like_prop = c_GR.prop_log_like;
+        double uniform_RV = gsl_ran_flat(r, 0, 1.);
+        double hastings_ratio = min(1., 0.0003539626*exp(transdim_log_like_prop - c_BD.curr_log_like + p_x));  //hard coded is contribution from priors
+        if(hastings_ratio >= uniform_RV)
+        {
+            accept_1_to_2();
+        }
+        else
+        {
+            reject_1_to_2();
+        }
+    }
+}
+
+void TransDim_Chain_BD_GR::accept_2_to_1()
+{
+    c_BD.accept_jump();
+    c_BD.count_in_temp--;
+    c_BD.count_in_temp_accpt--;
+    count_transdim_GR_BD++;
+    count_transdim_GR_BD_accpt++;
+}
+
+void TransDim_Chain_BD_GR::accept_1_to_2()
+{
+    c_GR.accept_jump();
+    c_GR.count_in_temp--;
+    c_GR.count_in_temp_accpt--;
+    count_transdim_BD_GR++;
+    count_transdim_BD_GR_accpt++;
+}
+
+void TransDim_Chain_BD_GR::reject_2_to_1()
+{
+    count_transdim_GR_BD++;
+}
+
+void TransDim_Chain_BD_GR::reject_1_to_2()
+{
+    count_transdim_BD_GR++;
 }
 
 void TransDim_Chain_BD_GR::transdim_jump()

@@ -7,8 +7,6 @@
 #include "llhood_maxd.hpp"
 #include "fisher.hpp"
 
-//#include "TransDim_Chain.hpp"
-
 // Interface Class
 class Chain
 {
@@ -142,6 +140,7 @@ public:
     virtual double get_curr_log_like();
     virtual double get_temp();
     virtual void update_eigen_sys();
+    friend class TransDim_Chain_BD_GR;
     
 private:
     bool out_of_prior_bounds;
