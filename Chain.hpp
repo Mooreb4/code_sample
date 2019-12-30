@@ -7,6 +7,8 @@
 #include "llhood_maxd.hpp"
 #include "fisher.hpp"
 
+//#include "TransDim_Chain.hpp"
+
 // Interface Class
 class Chain
 {
@@ -39,6 +41,8 @@ public:
     virtual double get_temp()                                   = 0;
     virtual void update_eigen_sys()                             = 0;
 };
+
+//TODO -- BCM -- remove getter setters --> freind function for interchain swapping and transdimensional swapping
 
 // A derived class which handles General Relativity Parameter Estimation
 class Chain_GR : public Chain
@@ -74,6 +78,7 @@ public:
     virtual double get_curr_log_like();
     virtual double get_temp();
     virtual void update_eigen_sys();
+    friend class TransDim_Chain_BD_GR;
     
 private:
     bool out_of_prior_bounds;

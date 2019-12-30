@@ -6,7 +6,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-// Default Constructor
+// Constructor
 Chain_GR::Chain_GR(vector<complex<double>> &signal_, vector<double> curr, vector<double> &noise_, vector<double> &noise_fish_, double temp_, double f_begin_, double fend_, double df_, double df_fish_, double ep_fish_, unsigned int num_params_, unsigned int num_diff_evol_samples_)
 {
     count_in_temp           = 0;
