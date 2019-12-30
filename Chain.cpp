@@ -169,6 +169,7 @@ void Chain_GR::attempt_jump()
     }
     else
     {
+        calc_log_like_prop();
         double hastings_ratio = min(1., prop_log_like - curr_log_like);
         double uniform_RV     = gsl_ran_flat(r, 0, 1.);
         
@@ -279,9 +280,94 @@ void Chain_GR::update_fisher()
     fisher = fim_GR(curr_state, noise_fish, f_begin, fend, df_fish, ep_fish, temp, 3);
 }
 
+void Chain_GR::update_eigen_sys()
+{
+    eigen_sys.compute(fisher);
+}
+
+void Chain_GR::set_curr_state(vector<double> &vect)
+{
+    for(int i = 0; i < curr_state.size(); i++)
+    {
+        curr_state[i] = vect[i];
+    }
+}
+
+vector<double> Chain_GR::get_curr_state()
+{
+    return curr_state;
+}
+
+void Chain_GR::set_fisher(Eigen::MatrixXd &fisher_)
+{
+    fisher = fisher_;
+}
+
+Eigen::MatrixXd Chain_GR::get_fisher()
+{
+    return fisher;
+}
+
+void Chain_GR::set_curr_log_like(double log_like)
+{
+    curr_log_like = log_like;
+}
+
+double Chain_GR::get_curr_log_like()
+{
+    return curr_log_like;
+}
+
+void Chain_GR::accept_interchain(Chain &c)
+{
+    vector<double> temp_state = c.get_curr_state();
+    Eigen::MatrixXd temp_fish = c.get_fisher();
+    double temp_log_like      = c.get_curr_log_like();
+    
+    c.set_curr_state(curr_state);
+    set_curr_state(temp_state);
+    
+    c.set_curr_log_like(curr_log_like   * temp/c.get_temp());
+    curr_log_like   = temp_log_like * c.get_temp()/temp;
+    
+    Eigen::MatrixXd temp_fish_2 = fisher * temp/c.get_temp();
+    c.set_fisher(temp_fish_2);
+    fisher      = temp_fish * c.get_temp()/temp;
+    
+    update_eigen_sys();
+    c.update_eigen_sys();
+    
+    count_interchain++;
+    count_interchain_accpt++;
+}
+
+void Chain_GR::reject_interchain()
+{
+    count_interchain++;
+}
+
+void Chain_GR::interchain_swap(Chain &c)
+{
+    double likeT1X2 = c.get_curr_log_like() * c.get_temp()/temp; //Likelihood of state 2 at temp 1
+    double likeT2X1 = curr_log_like         * temp/c.get_temp(); //Likelihood of state 1 at temp 2
+    
+    double hastings_ratio  = min(1., exp((likeT1X2 + likeT2X1)-(curr_log_like + c.get_curr_log_like())));
+    double uniform_RV      = gsl_ran_flat(r, 0, 1.);
+    
+    if(hastings_ratio >= uniform_RV)
+    {
+        accept_interchain(c);
+    }
+    else
+    {
+        reject_interchain();
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Implementing the member functions of Chain_BD
+// (Almost identical to Chain_GR, but differ in Fisher, jumps, priors)
 //
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -452,6 +538,7 @@ void Chain_BD::attempt_jump()
     }
     else
     {
+        calc_log_like_prop();
         double hastings_ratio = min(1., prop_log_like - curr_log_like);
         double uniform_RV     = gsl_ran_flat(r, 0, 1.);
         
@@ -560,4 +647,88 @@ void Chain_BD::write_to_diff_evol()
 void Chain_BD::update_fisher()
 {
     fisher = fim_GR(curr_state, noise_fish, f_begin, fend, df_fish, ep_fish, temp, 3);
+}
+
+void Chain_BD::update_eigen_sys()
+{
+    eigen_sys.compute(fisher);
+}
+
+void Chain_BD::set_curr_state(vector<double> &vect)
+{
+    for(int i = 0; i < curr_state.size(); i++)
+    {
+        curr_state[i] = vect[i];
+    }
+}
+
+vector<double> Chain_BD::get_curr_state()
+{
+    return curr_state;
+}
+
+void Chain_BD::set_fisher(Eigen::MatrixXd &fisher_)
+{
+    fisher = fisher_;
+}
+
+Eigen::MatrixXd Chain_BD::get_fisher()
+{
+    return fisher;
+}
+
+void Chain_BD::set_curr_log_like(double log_like)
+{
+    curr_log_like = log_like;
+}
+
+double Chain_BD::get_curr_log_like()
+{
+    return curr_log_like;
+}
+
+void Chain_BD::accept_interchain(Chain &c)
+{
+    vector<double> temp_state = c.get_curr_state();
+    Eigen::MatrixXd temp_fish = c.get_fisher();
+    double temp_log_like      = c.get_curr_log_like();
+    
+    c.set_curr_state(curr_state);
+    set_curr_state(temp_state);
+    
+    c.set_curr_log_like(curr_log_like   * temp/c.get_temp());
+    curr_log_like   = temp_log_like * c.get_temp()/temp;
+    
+    Eigen::MatrixXd temp_fish_2 = fisher * temp/c.get_temp();
+    c.set_fisher(temp_fish_2);
+    fisher      = temp_fish * c.get_temp()/temp;
+    
+    update_eigen_sys();
+    c.update_eigen_sys();
+    
+    count_interchain++;
+    count_interchain_accpt++;
+}
+
+void Chain_BD::reject_interchain()
+{
+    count_interchain++;
+}
+
+void Chain_BD::interchain_swap(Chain &c)
+{
+    double likeT1X2 = c.get_curr_log_like() * c.get_temp()/temp; //Likelihood of state 2 at temp 1
+    double likeT2X1 = curr_log_like         * temp/c.get_temp(); //Likelihood of state 1 at temp 2
+    
+    double hastings_ratio  = min(1., exp((likeT1X2 + likeT2X1)-(curr_log_like + c.get_curr_log_like())));
+    double uniform_RV      = gsl_ran_flat(r, 0, 1.);
+    
+    if(hastings_ratio >= uniform_RV)
+    {
+        accept_interchain(c);
+    }
+    else
+    {
+        reject_interchain();
+    }
 }

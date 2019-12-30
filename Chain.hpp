@@ -12,21 +12,32 @@ class Chain
 {
 public:
     virtual ~Chain() {};
-    virtual void update_prop_fisher()       = 0;
-    virtual void update_prop_diff_evol()    = 0;
-    virtual void update_prop_priors()       = 0;
-    virtual void calc_log_like_prop()       = 0;
-    virtual void check_prior()              = 0;
-    virtual void attempt_jump()             = 0;
-    virtual void jump()                     = 0;
-    virtual void print_acc_ratios()         = 0;
-    virtual void print_states()             = 0;
-    virtual void print_fisher()             = 0;
-    virtual void print_all()                = 0;
-    virtual void write_to_diff_evol()       = 0;
-    virtual void update_fisher()            = 0;
-    virtual void accept_jump()              = 0;
-    virtual void reject_jump()              = 0;
+    virtual void update_prop_fisher()                           = 0;
+    virtual void update_prop_diff_evol()                        = 0;
+    virtual void update_prop_priors()                           = 0;
+    virtual void calc_log_like_prop()                           = 0;
+    virtual void check_prior()                                  = 0;
+    virtual void attempt_jump()                                 = 0;
+    virtual void jump()                                         = 0;
+    virtual void print_acc_ratios()                             = 0;
+    virtual void print_states()                                 = 0;
+    virtual void print_fisher()                                 = 0;
+    virtual void print_all()                                    = 0;
+    virtual void write_to_diff_evol()                           = 0;
+    virtual void update_fisher()                                = 0;
+    virtual void accept_jump()                                  = 0;
+    virtual void reject_jump()                                  = 0;
+    virtual void interchain_swap(Chain &c)                      = 0;
+    virtual void accept_interchain(Chain &c)                    = 0;
+    virtual void reject_interchain()                            = 0;
+    virtual void set_curr_state(vector<double> &vect)           = 0;
+    virtual vector<double> get_curr_state()                     = 0;
+    virtual void set_fisher(Eigen::MatrixXd &fisher)            = 0;
+    virtual Eigen::MatrixXd get_fisher()                        = 0;
+    virtual void set_curr_log_like(double log_like)             = 0;
+    virtual double get_curr_log_like()                          = 0;
+    virtual double get_temp()                                   = 0;
+    virtual void update_eigen_sys()                             = 0;
 };
 
 // A derived class which handles General Relativity Parameter Estimation
@@ -52,7 +63,17 @@ public:
     virtual void update_fisher();
     virtual void accept_jump();
     virtual void reject_jump();
-    virtual void interchain_swap(Chain_GR &c);
+    virtual void interchain_swap(Chain &c);
+    virtual void accept_interchain(Chain &c);
+    virtual void reject_interchain();
+    virtual void set_curr_state(vector<double> &vect);
+    virtual vector<double> get_curr_state();
+    virtual void set_fisher(Eigen::MatrixXd &fisher_);
+    virtual Eigen::MatrixXd get_fisher();
+    virtual void set_curr_log_like(double log_like);
+    virtual double get_curr_log_like();
+    virtual double get_temp();
+    virtual void update_eigen_sys();
     
 private:
     bool out_of_prior_bounds;
@@ -105,7 +126,17 @@ public:
     virtual void update_fisher();
     virtual void accept_jump();
     virtual void reject_jump();
-    virtual void interchain_swap(Chain_BD &c);
+    virtual void interchain_swap(Chain &c);
+    virtual void accept_interchain(Chain &c);
+    virtual void reject_interchain();
+    virtual void set_curr_state(vector<double> &vect);
+    virtual vector<double> get_curr_state();
+    virtual void set_fisher(Eigen::MatrixXd &fisher_);
+    virtual Eigen::MatrixXd get_fisher();
+    virtual void set_curr_log_like(double log_like);
+    virtual double get_curr_log_like();
+    virtual double get_temp();
+    virtual void update_eigen_sys();
     
 private:
     bool out_of_prior_bounds;
