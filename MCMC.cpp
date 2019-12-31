@@ -159,7 +159,7 @@ int main (int argc, const char * argv[]){
     auto temp_spacing     = stod(argv[8]);
     auto chain_type       = stoi(argv[9]);
     
-    vector<Chain_GR> chains;
+    vector<Chain *> chains;
     vector<double> GR_loc(4);
     vector<double> BD_loc(5);
     
@@ -179,7 +179,8 @@ int main (int argc, const char * argv[]){
     {
         for(unsigned int i = 0; i < N_chain; i++)
         {
-            Chain_GR c(h2, GR_loc, noise, noise_fish, pow(temp_spacing, i), f_begin, fend, df, df_fish, ep_fish, 4, num_diff_evol_samples);
+            Chain_GR c_GR(h2, GR_loc, noise, noise_fish, pow(temp_spacing, i), f_begin, fend, df, df_fish, ep_fish, 4, num_diff_evol_samples);
+            Chain * c = &c_GR;
             chains.push_back(c);
         }
     }
@@ -187,8 +188,9 @@ int main (int argc, const char * argv[]){
     {
         for(unsigned int i = 0; i < N_chain; i++)
         {
-//            Chain_BD c(h2, BD_loc, noise, noise_fish, pow(temp_spacing, i), f_begin, fend, df, df_fish, ep_fish, 5, num_diff_evol_samples);
-//            chains.push_back(c);
+            Chain_BD c_BD(h2, BD_loc, noise, noise_fish, pow(temp_spacing, i), f_begin, fend, df, df_fish, ep_fish, 5, num_diff_evol_samples);
+            Chain * c = &c_BD;
+            chains.push_back(c);
         }
     }
     
@@ -208,14 +210,14 @@ int main (int argc, const char * argv[]){
         { //Within Tempurature jumps
             for(auto c : chains)
             {
-                c.jump();
+                c -> jump();
             }
         }
         else
         { //Inter tempurature jumps
             for(unsigned int j = 0; j < N_chain - 1; j++)
             {
-                chains[i].interchain_swap(chains[i + 1]);
+                chains[i] -> interchain_swap(*chains[i + 1]);
             }
         }
         //Write to differential evolution list every 100 jumps
@@ -223,14 +225,15 @@ int main (int argc, const char * argv[]){
         {
             for(auto c : chains)
             {
-                c.write_to_diff_evol();
+                c -> write_to_diff_evol();
             }
         }
+        //Print info periodically
         if (i % 10000 == 0)
         {
             for(auto c : chains)
             {
-                c.print_all();
+                c -> print_all();
             }
         }
         //Periodically update Fishers.
@@ -238,7 +241,7 @@ int main (int argc, const char * argv[]){
         {
             for(auto c : chains)
             {
-                c.update_fisher();
+                c -> update_fisher();
             }
         }
         
