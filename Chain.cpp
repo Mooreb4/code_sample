@@ -651,7 +651,7 @@ void Chain_BD::write_to_diff_evol()
 
 void Chain_BD::update_fisher()
 {
-    fisher = fim_GR(curr_state, noise_fish, f_begin, fend, df_fish, ep_fish, temp, 3);
+    fisher = fim_BD(curr_state, noise_fish, f_begin, fend, df_fish, ep_fish, temp, 3);
 }
 
 void Chain_BD::update_eigen_sys()
