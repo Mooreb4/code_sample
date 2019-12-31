@@ -16,8 +16,8 @@ Chain_GR::Chain_GR(vector<complex<double>> &signal_, vector<double> curr, vector
     diff_evol_track         = 0;
     curr_state              = curr;
     temp                    = temp_;
-    curr_log_like           = loglike(curr_state, f_begin, fend, df, signal, noise, temp);
-    fisher                  = fim_GR(curr_state, noise_fish, f_begin, fend, df_fish, ep_fish, temp, 3);
+    curr_log_like           = loglike(curr_state, f_begin_, fend_, df_, signal_, noise_, temp);
+    fisher                  = fim_GR(curr_state, noise_fish_, f_begin_, fend_, df_fish_, ep_fish_, temp, 3);
     out_of_prior_bounds     = false;
     
     signal                  = signal_;
@@ -170,7 +170,7 @@ void Chain_GR::attempt_jump()
     else
     {
         calc_log_like_prop();
-        double hastings_ratio = min(1., prop_log_like - curr_log_like);
+        double hastings_ratio = min(1., exp(prop_log_like - curr_log_like));
         double uniform_RV     = gsl_ran_flat(r, 0, 1.);
         
         if(hastings_ratio >= uniform_RV)
@@ -386,8 +386,8 @@ Chain_BD::Chain_BD(vector<complex<double>> &signal_, vector<double> curr, vector
     diff_evol_track         = 0;
     curr_state              = curr;
     temp                    = temp_;
-    curr_log_like           = loglike(curr_state, f_begin, fend, df, signal, noise, temp);
-    fisher                  = fim_BD(curr_state, noise_fish, f_begin, fend, df_fish, ep_fish, temp, 3);
+    curr_log_like           = loglike(curr_state, f_begin_, fend_, df_, signal_, noise_, temp);
+    fisher                  = fim_BD(curr_state, noise_fish_, f_begin_, fend_, df_fish_, ep_fish_, temp, 3);
     out_of_prior_bounds     = false;
     
     signal                  = signal_;
@@ -544,7 +544,7 @@ void Chain_BD::attempt_jump()
     else
     {
         calc_log_like_prop();
-        double hastings_ratio = min(1., prop_log_like - curr_log_like);
+        double hastings_ratio = min(1., exp(prop_log_like - curr_log_like));
         double uniform_RV     = gsl_ran_flat(r, 0, 1.);
         
         if(hastings_ratio >= uniform_RV)
