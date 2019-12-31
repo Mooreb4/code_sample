@@ -32,7 +32,7 @@ public:
     virtual void reject_interchain()                            = 0;
     virtual void set_curr_state(vector<double> &vect)           = 0;
     virtual vector<double> get_curr_state()                     = 0;
-    virtual void set_fisher(Eigen::MatrixXd &fisher_)            = 0;
+    virtual void set_fisher(Eigen::MatrixXd &fisher_)           = 0;
     virtual Eigen::MatrixXd get_fisher()                        = 0;
     virtual void set_curr_log_like(double log_like)             = 0;
     virtual double get_curr_log_like()                          = 0;
