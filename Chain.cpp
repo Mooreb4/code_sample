@@ -6,7 +6,6 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-// Constructor
 Chain_GR::Chain_GR(vector<complex<double>> &signal_, vector<double> curr, vector<double> &noise_, vector<double> &noise_fish_, double temp_, double f_begin_, double fend_, double df_, double df_fish_, double ep_fish_, unsigned int num_params_, unsigned int num_diff_evol_samples_)
 {
     count_in_temp           = 0;
@@ -36,12 +35,10 @@ Chain_GR::Chain_GR(vector<complex<double>> &signal_, vector<double> curr, vector
     eigen_sys.compute(fisher);
     r = gsl_rng_alloc (gsl_rng_taus);
 }
-// Destructor
 Chain_GR::~Chain_GR()
 {
     gsl_rng_free (r);
 }
-// copy constructor
 Chain_GR::Chain_GR( const Chain_GR &copy)
 {
     count_in_temp           = copy.count_in_temp;
@@ -72,8 +69,6 @@ Chain_GR::Chain_GR( const Chain_GR &copy)
 
     r                       = gsl_rng_clone( copy.r );
 }
-
-// copy assigment constructor
 Chain_GR& Chain_GR::operator=( const Chain_GR &rhs )
 {
     if ( this != &rhs)
@@ -110,6 +105,8 @@ Chain_GR& Chain_GR::operator=( const Chain_GR &rhs )
 
 void Chain_GR::update_prop_fisher()
 {
+    // Updated the proposed state to be drawn from a multivariate gaussian where "eigen_sys"
+    // is the eigen system of the fisher information matrix
     double delt = gsl_ran_gaussian (r, 1.);
     int i = floor(gsl_ran_flat(r, 0, 4));
     if (i == 4){i = 3;}
@@ -121,6 +118,7 @@ void Chain_GR::update_prop_fisher()
 
 void Chain_GR::update_prop_diff_evol()
 {
+    // Propose a jump along the covariances of the probablility distribution being explored
     if(diff_evol_track < 2) //Not enough diff evol samples to do a diff evol jump
     {
         update_prop_fisher();
@@ -140,6 +138,7 @@ void Chain_GR::update_prop_diff_evol()
 //is there a better way to handle priors without hard coding them here? own class?
 void Chain_GR::update_prop_priors()
 {
+    // Draw a proposal from prior distributions
     prop_state[0] = exp(gsl_ran_flat(r, -0.223144, 2.30259));
     prop_state[1] = gsl_ran_flat(r, 0.08, 0.25);
     prop_state[2] = gsl_ran_flat(r, 0.000001, 0.805);
@@ -163,7 +162,8 @@ void Chain_GR::check_prior()
 
 void Chain_GR::attempt_jump()
 {
-    if(out_of_prior_bounds == true)
+    //Handles jumps from one state to another based on the transition kernel "hastings_ratio"
+    if(out_of_prior_bounds)
     {
         reject_jump();
     }
@@ -225,37 +225,37 @@ void Chain_GR::jump()
 
 void Chain_GR::print_acc_ratios()
 {
-    cout << "GR chain with temp "   << temp << " acceptance ratios:"                    << endl;
-    cout << "Within Temp: "         << (double) count_in_temp_accpt/count_in_temp       << endl;
-    cout << "Interchain: "          << (double) count_interchain_accpt/count_interchain << endl;
-    cout << endl;
+    std::cout << "GR chain with temp "   << temp << " acceptance ratios:"                                << std::endl;
+    std::cout << "Within Temp: "         << static_cast<double>(count_in_temp_accpt)/count_in_temp       << std::endl;
+    std::cout << "Interchain: "          << static_cast<double>(count_interchain_accpt)/count_interchain << std::endl;
+    std::cout << std::endl;
 }
 
 void Chain_GR::print_states()
 {
-    cout << "The current state:" << endl;
+    std::cout << "The current state:" << std::endl;
     for(auto x : curr_state)
     {
-        cout << x << endl;
+        std::cout << x << std::endl;
     }
-    cout << endl;
+    std::cout << std::endl;
     
-    cout << "The proposed state:" << endl;
+    std::cout << "The proposed state:" << std::endl;
     for(auto x : prop_state)
     {
-        cout << x << endl;
+        std::cout << x << std::endl;
     }
-    cout << endl;
+    std::cout << std::endl;
 }
 
 void Chain_GR::print_fisher()
 {
-    cout << "The fisher information matrix:" << endl;
-    cout << fisher << endl << endl;
-    cout << "The eigenvalues of the fisher:" << endl;
-    cout << eigen_sys.eigenvalues().transpose() << endl << endl;
-    cout << "The eigenvectors of the fisher:" << endl;
-    cout << eigen_sys.eigenvectors() << endl << endl;
+    std::cout << "The fisher information matrix:" << std::endl;
+    std::cout << fisher << std::endl << std::endl;
+    std::cout << "The eigenvalues of the fisher:" << std::endl;
+    std::cout << eigen_sys.eigenvalues().transpose() << std::endl << std::endl;
+    std::cout << "The eigenvectors of the fisher:" << std::endl;
+    std::cout << eigen_sys.eigenvectors() << std::endl << std::endl;
 }
 
 void Chain_GR::print_all()
@@ -321,6 +321,7 @@ double Chain_GR::get_curr_log_like()
 
 void Chain_GR::accept_interchain(Chain &c)
 {
+    //switch locations, likelihoods, and fishers between chains of different temperatures
     vector<double> temp_state = c.get_curr_state();
     Eigen::MatrixXd temp_fish = c.get_fisher();
     double temp_log_like      = c.get_curr_log_like();
@@ -349,6 +350,7 @@ void Chain_GR::reject_interchain()
 
 void Chain_GR::interchain_swap(Chain &c)
 {
+    //Handles chain exchanges between chains of different tempuratures
     double likeT1X2 = c.get_curr_log_like() * c.get_temp()/temp; //Likelihood of state 2 at temp 1
     double likeT2X1 = curr_log_like         * temp/c.get_temp(); //Likelihood of state 1 at temp 2
     
@@ -370,6 +372,11 @@ double Chain_GR::get_temp()
     return temp;
 }
 
+void Chain_GR::write(ostream& os)
+{
+    os << curr_state[0] << ' ' << curr_state[1] << ' ' << curr_state[2] << ' ' << curr_state[3] << endl;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Implementing the member functions of Chain_BD
@@ -377,7 +384,6 @@ double Chain_GR::get_temp()
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-// Default Constructor
 Chain_BD::Chain_BD(vector<complex<double>> &signal_, vector<double> curr, vector<double> &noise_, vector<double> &noise_fish_, double temp_, double f_begin_, double fend_, double df_, double df_fish_, double ep_fish_, unsigned int num_params_, unsigned int num_diff_evol_samples_)
 {
     count_in_temp           = 0;
@@ -407,12 +413,11 @@ Chain_BD::Chain_BD(vector<complex<double>> &signal_, vector<double> curr, vector
     eigen_sys.compute(fisher);
     r = gsl_rng_alloc (gsl_rng_taus);
 }
-// Destructor
 Chain_BD::~Chain_BD()
 {
     gsl_rng_free (r);
 }
-// copy constructor
+
 Chain_BD::Chain_BD( const Chain_BD &copy)
 {
     count_in_temp           = copy.count_in_temp;
@@ -444,7 +449,6 @@ Chain_BD::Chain_BD( const Chain_BD &copy)
     r                       = gsl_rng_clone( copy.r );
 }
 
-// copy assigment constructor
 Chain_BD& Chain_BD::operator=( const Chain_BD &rhs )
 {
     if ( this != &rhs)
@@ -510,7 +514,6 @@ void Chain_BD::update_prop_diff_evol()
     }
 }
 
-//is there a better way to handle priors without hard coding them here? own class?
 void Chain_BD::update_prop_priors()
 {
     prop_state[0] = exp(gsl_ran_flat(r, -0.223144, 2.30259));
@@ -538,7 +541,7 @@ void Chain_BD::check_prior()
 
 void Chain_BD::attempt_jump()
 {
-    if(out_of_prior_bounds == true)
+    if(out_of_prior_bounds)
     {
         reject_jump();
     }
@@ -600,37 +603,37 @@ void Chain_BD::jump()
 
 void Chain_BD::print_acc_ratios()
 {
-    cout << "BD chain with temp "   << temp << " acceptance ratios:"                    << endl;
-    cout << "Within Temp: "         << (double) count_in_temp_accpt/count_in_temp       << endl;
-    cout << "Interchain: "          << (double) count_interchain_accpt/count_interchain << endl;
-    cout << endl;
+    std::cout << "BD chain with temp "   << temp << " acceptance ratios:"                                << std::endl;
+    std::cout << "Within Temp: "         << static_cast<double>(count_in_temp_accpt)/count_in_temp       << std::endl;
+    std::cout << "Interchain: "          << static_cast<double>(count_interchain_accpt)/count_interchain << std::endl;
+    std::cout << std::endl;
 }
 
 void Chain_BD::print_states()
 {
-    cout << "The current state:" << endl;
+    std::cout << "The current state:" << std::endl;
     for(auto x : curr_state)
     {
-        cout << x << endl;
+        std::cout << x << std::endl;
     }
-    cout << endl;
+    std::cout << std::endl;
     
-    cout << "The proposed state:" << endl;
+    std::cout << "The proposed state:" << std::endl;
     for(auto x : prop_state)
     {
-        cout << x << endl;
+        std::cout << x << std::endl;
     }
-    cout << endl;
+    std::cout << std::endl;
 }
 
 void Chain_BD::print_fisher()
 {
-    cout << "The fisher information matrix:" << endl;
-    cout << fisher << endl << endl;
-    cout << "The eigenvalues of the fisher:" << endl;
-    cout << eigen_sys.eigenvalues().transpose() << endl << endl;
-    cout << "The eigenvectors of the fisher:" << endl;
-    cout << eigen_sys.eigenvectors() << endl << endl;
+    std::cout << "The fisher information matrix:" << std::endl;
+    std::cout << fisher << std::endl << std::endl;
+    std::cout << "The eigenvalues of the fisher:" << std::endl;
+    std::cout << eigen_sys.eigenvalues().transpose() << std::endl << std::endl;
+    std::cout << "The eigenvectors of the fisher:" << std::endl;
+    std::cout << eigen_sys.eigenvectors() << std::endl << std::endl;
 }
 
 void Chain_BD::print_all()
@@ -743,4 +746,9 @@ void Chain_BD::interchain_swap(Chain &c)
 double Chain_BD::get_temp()
 {
     return temp;
+}
+
+void Chain_BD::write(ostream& os)
+{
+    os << curr_state[0] << ' ' << curr_state[1] << ' ' << curr_state[2] << ' ' << curr_state[3] << ' ' << curr_state[4] << endl;
 }

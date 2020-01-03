@@ -13,11 +13,18 @@
 #include "Chain.hpp"
 
 unsigned int num_diff_evol_samples = 1000;
-auto f_begin = 0;
-auto f_end = 1000;
-auto df = 0.015625;
-auto ep_fish = 1e-8;
-auto df_fish = 0.25;
+auto f_begin                       = 0;
+auto f_end                         = 1000;
+auto df                            = 0.015625;
+auto ep_fish                       = 1e-8;
+auto df_fish                       = 0.25;
+auto num_params_GR                 = 4;
+auto num_params_BD                 = 5;
+auto num_samp_bw_interchain_jump   = 5;
+auto num_samp_bw_DE_write          = 100;
+auto num_samp_bw_print_info        = 10000;
+auto num_samp_bw_fisher_update     = 800;
+auto out_precision                 = 16;
 
 vector<complex<double>> gen_waveform(double M, double eta, double e0, double A, double b, double fend);
 vector<complex<double>> sum_f2(vector<vector<complex<double>>> &vect);
@@ -52,7 +59,7 @@ int main (int argc, const char * argv[]){
         freqs[i] = df*i;
     }
     
-    auto fend = freqs[data_size - 1];
+    auto fend = freqs[freqs.size() - 1];
     
     std::cout << "Injection Complete" << std::endl;
     
@@ -80,9 +87,9 @@ int main (int argc, const char * argv[]){
         j++;
     }
     
-    gsl_interp_accel *acc         = gsl_interp_accel_alloc ();
-    gsl_spline *noise_spline      = gsl_spline_alloc (gsl_interp_cspline, num_pts);
-    gsl_spline_init (noise_spline, f_val, noise_val, num_pts);
+    gsl_interp_accel *acc         = gsl_interp_accel_alloc();
+    gsl_spline *noise_spline      = gsl_spline_alloc(gsl_interp_cspline, num_pts);
+    gsl_spline_init(noise_spline, f_val, noise_val, num_pts);
     
     //noise for the likelihood
     vector<double> noise(data_size);
@@ -90,7 +97,7 @@ int main (int argc, const char * argv[]){
     {
         if (freqs[i] > f_noise_low &&  freqs[i] < f_noise_high )
         {
-            noise[i] = gsl_spline_eval (noise_spline, freqs[i], acc);
+            noise[i] = gsl_spline_eval(noise_spline, freqs[i], acc);
         }
         else
         {
@@ -110,7 +117,7 @@ int main (int argc, const char * argv[]){
         
         if (f > f_noise_low &&  f < f_noise_high )
         {
-            noise_fish[i] = gsl_spline_eval (noise_spline, f, acc);
+            noise_fish[i] = gsl_spline_eval(noise_spline, f, acc);
         }
         else
         {
@@ -150,7 +157,7 @@ int main (int argc, const char * argv[]){
         std::cout << "Amp = " << A_curr << " Cond = " << snr_diff_curr << std::endl;
     }
     
-    cout << "The Final Injected Parameters are M  = " << M_in << " Eta = " << " eta_in " << eta_in << " e_ref = " << e0_in << " A = " << A_curr << endl;
+    std::cout << "The Final Injected Parameters are M  = " << M_in << " Eta = " << " eta_in " << eta_in << " e_ref = " << e0_in << " A = " << A_curr << std::endl;
     
     ////////////////////////////////////////////////////////
     // Initialize the chains
@@ -163,14 +170,13 @@ int main (int argc, const char * argv[]){
     auto chain_type       = stoi(argv[10]);
     
     vector<Chain*> chains;
-    vector<double> GR_loc(5);
-    vector<double> BD_loc(5);
+    vector<double> GR_loc(num_params_GR);
+    vector<double> BD_loc(num_params_BD);
     
     GR_loc[0] = M_in;
     GR_loc[1] = eta_in;
     GR_loc[2] = e0_in;
     GR_loc[3] = A_curr;
-    GR_loc[4] = 0;
     
     BD_loc[0] = M_in;
     BD_loc[1] = eta_in;
@@ -183,7 +189,7 @@ int main (int argc, const char * argv[]){
     {
         for(unsigned int i = 0; i < N_chain; i++)
         {
-            Chain * c = new Chain_GR(h2, GR_loc, noise, noise_fish, pow(temp_spacing, i), f_begin, fend, df, df_fish, ep_fish, 5, num_diff_evol_samples);
+            Chain * c = new Chain_GR(h2, GR_loc, noise, noise_fish, pow(temp_spacing, i), f_begin, fend, df, df_fish, ep_fish, num_params_GR, num_diff_evol_samples);
             chains.push_back(c);
         }
     }
@@ -191,7 +197,7 @@ int main (int argc, const char * argv[]){
     {
         for(unsigned int i = 0; i < N_chain; i++)
         {
-            Chain * c = new Chain_BD(h2, BD_loc, noise, noise_fish, pow(temp_spacing, i), f_begin, fend, df, df_fish, ep_fish, 5, num_diff_evol_samples);
+            Chain * c = new Chain_BD(h2, BD_loc, noise, noise_fish, pow(temp_spacing, i), f_begin, fend, df, df_fish, ep_fish, num_params_BD, num_diff_evol_samples);
             chains.push_back(c);
         }
     }
@@ -202,12 +208,14 @@ int main (int argc, const char * argv[]){
     ////////////////////////////////////////////////////////
     
     ofstream output;
+    output.open("MCMC_output.txt");
+    output << setprecision(out_precision);
     
     auto N_jumps        = stoi(argv[9]);
     
     for(unsigned int i = 0; i < N_jumps; i++)
     {
-        if( i % 5 != 0)
+        if( i % num_samp_bw_interchain_jump != 0)
         { //Within Tempurature jumps
             for(auto c : chains)
             {
@@ -222,7 +230,7 @@ int main (int argc, const char * argv[]){
             }
         }
         //Write to differential evolution list every 100 jumps
-        if ( i % 100 == 0)
+        if ( i % num_samp_bw_DE_write == 0)
         {
             for(auto c : chains)
             {
@@ -230,7 +238,7 @@ int main (int argc, const char * argv[]){
             }
         }
         //Print info periodically
-        if (i % 10000 == 0)
+        if (i % num_samp_bw_print_info == 0)
         {
             for(auto c : chains)
             {
@@ -238,13 +246,14 @@ int main (int argc, const char * argv[]){
             }
         }
         //Periodically update Fishers.
-        if( i % 800 == 0 )
+        if( i % num_samp_bw_fisher_update == 0 )
         {
             for(auto c : chains)
             {
                 c -> update_fisher();
             }
         }
+        output << *chains[0];
     }
     
     for(auto c : chains)
@@ -252,10 +261,13 @@ int main (int argc, const char * argv[]){
         delete c;
     }
     
+    output.close();
+    
     return 0;
 }
 
-vector<complex<double>> gen_waveform(double M, double eta, double e0, double A, double b, double fend){
+vector<complex<double>> gen_waveform(double M, double eta, double e0, double A, double b, double fend)
+{
     TaylorF2e F2e(M, eta, e0, A, b, f_begin, fend, df);
     F2e.init_interps(1000);
     F2e.make_scheme();
@@ -265,7 +277,8 @@ vector<complex<double>> gen_waveform(double M, double eta, double e0, double A, 
     
     return summedf2;
 }
-vector<complex<double>> sum_f2(vector<vector<complex<double>>> &vect){
+vector<complex<double>> sum_f2(vector<vector<complex<double>>> &vect)
+{
     int N = vect[0].size();
     int j = vect.size();
     vector<complex<double>> summed(N);

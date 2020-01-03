@@ -12,6 +12,7 @@ class Chain
 {
 public:
     virtual ~Chain() {};
+    friend ostream& operator << (ostream& o, Chain& c);
     virtual void jump()                                         = 0;
     virtual void print_acc_ratios()                             = 0;
     virtual void print_states()                                 = 0;
@@ -28,18 +29,14 @@ public:
     virtual double get_temp()                                   = 0;
     virtual void update_eigen_sys()                             = 0;
     virtual void write_to_diff_evol()                           = 0;
-private:
-    virtual void update_prop_fisher()                           = 0;
-    virtual void update_prop_diff_evol()                        = 0;
-    virtual void update_prop_priors()                           = 0;
-    virtual void calc_log_like_prop()                           = 0;
-    virtual void check_prior()                                  = 0;
-    virtual void attempt_jump()                                 = 0;
-    virtual void accept_jump()                                  = 0;
-    virtual void reject_jump()                                  = 0;
-    virtual void accept_interchain(Chain &c)                    = 0;
-    virtual void reject_interchain()                            = 0;
+    virtual void write(ostream& o)                              = 0;
 };
+
+inline std::ostream& operator<< (std::ostream& o, Chain& c)
+{
+    c.write(o);
+    return o;
+}
 
 // A derived class which handles General Relativity Parameter Estimation
 class Chain_GR : public Chain
@@ -65,6 +62,7 @@ public:
     virtual double get_temp();
     virtual void update_eigen_sys();
     virtual void write_to_diff_evol();
+    virtual void write(ostream& o);
     
 private:
     virtual void update_prop_fisher();
@@ -129,6 +127,7 @@ public:
     virtual double get_temp();
     virtual void update_eigen_sys();
     virtual void write_to_diff_evol();
+    virtual void write(ostream& o);
     
 private:
     virtual void update_prop_fisher();
